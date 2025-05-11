@@ -10,8 +10,21 @@ init([]) ->
     io:format("~n[ao_node] Ready to receive messages~n"),
     {ok, #{}}.
 
+handle_info(#{from := From, to := ToBin, key := Key, data := Data} = Msg, State) ->
+    io:format("[ao_node] Routing ~p~n", [Msg]),
+    case parse_device(ToBin) of
+        {ok, Module} ->
+            Result = try Module:call(Key, Data)
+                     catch _:Reason -> {error, Reason}
+                     end,
+            From ! {device_response, Result};
+        error ->
+            From ! {device_response, {error, unknown_device}}
+    end,
+    {noreply, State};
+
 handle_info(Msg, State) ->
-    io:format("[ao_node] Received: ~p~n", [Msg]),
+    io:format("[ao_node] Invalid message: ~p~n", [Msg]),
     {noreply, State}.
 
 handle_call(_, _, State) ->
@@ -22,3 +35,13 @@ handle_cast(_, State) ->
 
 terminate(_, _) -> ok.
 code_change(_, State, _) -> {ok, State}.
+
+parse_device(Bin) when is_binary(Bin) ->
+    case binary:split(Bin, <<"@">>, [global]) of
+        [ModBin, _Ver] ->
+            try list_to_existing_atom(binary_to_list(ModBin)) of
+                Mod -> {ok, Mod}
+            catch _:_ -> error
+            end;
+        _ -> error
+    end.
