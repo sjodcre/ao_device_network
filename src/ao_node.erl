@@ -4,6 +4,7 @@
 -export([start_link/0, init/1, handle_info/2, handle_call/3, handle_cast/2, terminate/2, code_change/3, send/2]).
 
 start_link() ->
+    code:ensure_loaded(device_logger),
     gen_server:start_link({local, ao_node}, ?MODULE, [], []).
 
 init([]) ->
