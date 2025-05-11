@@ -1,7 +1,7 @@
 -module(ao_node).
 -behaviour(gen_server).
 
--export([start_link/0, init/1, handle_info/2, handle_call/3, handle_cast/2, terminate/2, code_change/3]).
+-export([start_link/0, init/1, handle_info/2, handle_call/3, handle_cast/2, terminate/2, code_change/3, send/2]).
 
 start_link() ->
     gen_server:start_link({local, ao_node}, ?MODULE, [], []).
@@ -35,6 +35,29 @@ handle_cast(_, State) ->
 
 terminate(_, _) -> ok.
 code_change(_, State, _) -> {ok, State}.
+
+send(NodeShort, Text) ->
+    Node = resolve_full_node(NodeShort),
+    Self = self(),
+    Msg = #{
+        from => Self,
+        to => <<"device_logger@1.0">>,
+        key => <<"log">>,
+        data => unicode:characters_to_binary(Text)
+    },
+    {ao_node, Node} ! Msg,
+    receive
+        {device_response, Result} ->
+            io:format("[ao_node] Reply: ~p~n", [Result]),
+            Result
+    after 3000 ->
+        io:format("[ao_node] Timeout~n"),
+        timeout
+    end.
+
+resolve_full_node(Short) ->
+    [_, Host] = string:split(atom_to_list(node()), "@"),
+    list_to_atom(atom_to_list(Short) ++ "@" ++ Host).
 
 parse_device(Bin) when is_binary(Bin) ->
     case binary:split(Bin, <<"@">>, [global]) of
