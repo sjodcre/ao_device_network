@@ -1,5 +1,7 @@
 -module(device_math).
--export([call/2]).
+-export([keys/0, call/2]).
+
+keys() -> [<<"add">>, <<"mul">>]. %% example for device_math
 
 call(<<"add">>, Bin) ->
     case parse_numbers(Bin) of

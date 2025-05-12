@@ -1,11 +1,12 @@
 -module(ao_node).
 -behaviour(gen_server).
-
+-define(REGISTRY, device_registry).
 -export([start_link/0, init/1, handle_info/2, handle_call/3, handle_cast/2, terminate/2, code_change/3, send/2]).
 
 start_link() ->
-    code:ensure_loaded(device_logger),
-    code:ensure_loaded(device_math),
+    ?REGISTRY:start(),
+    % code:ensure_loaded(device_logger),
+    % code:ensure_loaded(device_math),
     gen_server:start_link({local, ao_node}, ?MODULE, [], []).
 
 init([]) ->
@@ -14,7 +15,8 @@ init([]) ->
 
 handle_info(#{from := From, to := ToBin, key := Key, data := Data} = Msg, State) ->
     io:format("[ao_node] Routing ~p~n", [Msg]),
-    case parse_device(ToBin) of
+    % case parse_device(ToBin) of
+    case ?REGISTRY:lookup(Key) of
         {ok, Module} ->
             % Result = try Module:call(Key, Data)
             %          catch _:Reason -> {error, Reason}

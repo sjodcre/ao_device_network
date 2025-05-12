@@ -1,5 +1,7 @@
 -module(device_logger).
--export([call/2]).
+-export([keys/0, call/2]).
+
+keys() -> [<<"log">>].
 
 call(<<"log">>, Data) ->
     io:format("[device_logger] Log: ~p~n", [Data]),
