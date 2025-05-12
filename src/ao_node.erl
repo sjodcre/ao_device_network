@@ -5,6 +5,7 @@
 
 start_link() ->
     code:ensure_loaded(device_logger),
+    code:ensure_loaded(device_math),
     gen_server:start_link({local, ao_node}, ?MODULE, [], []).
 
 init([]) ->
@@ -15,9 +16,12 @@ handle_info(#{from := From, to := ToBin, key := Key, data := Data} = Msg, State)
     io:format("[ao_node] Routing ~p~n", [Msg]),
     case parse_device(ToBin) of
         {ok, Module} ->
-            Result = try Module:call(Key, Data)
-                     catch _:Reason -> {error, Reason}
-                     end,
+            % Result = try Module:call(Key, Data)
+            %          catch _:Reason -> {error, Reason}
+            %          end,
+            Result = try apply(Module, call, [Key, Data])
+                catch _:Reason -> {error, Reason}
+                end,
             From ! {device_response, Result};
         error ->
             From ! {device_response, {error, unknown_device}}
@@ -40,11 +44,18 @@ code_change(_, State, _) -> {ok, State}.
 send(NodeShort, Text) ->
     Node = resolve_full_node(NodeShort),
     Self = self(),
+    % Msg = #{
+    %     from => Self,
+    %     to => <<"device_logger@1.0">>,
+    %     key => <<"log">>,
+    %     data => unicode:characters_to_binary(Text)
+    % },
+    [CmdBin | Rest] = binary:split(unicode:characters_to_binary(Text), <<" ">>, [global]),
     Msg = #{
         from => Self,
-        to => <<"device_logger@1.0">>,
-        key => <<"log">>,
-        data => unicode:characters_to_binary(Text)
+        to => device_for(CmdBin),
+        key => CmdBin,
+        data => unicode:characters_to_binary(string:trim(string:join([binary_to_list(S) || S <- Rest], " ")))
     },
     {ao_node, Node} ! Msg,
     receive
@@ -55,6 +66,10 @@ send(NodeShort, Text) ->
         io:format("[ao_node] Timeout~n"),
         timeout
     end.
+
+device_for(<<"add">>) -> <<"device_math@1.0">>;
+device_for(<<"mul">>) -> <<"device_math@1.0">>;
+device_for(_)         -> <<"device_logger@1.0">>.
 
 resolve_full_node(Short) ->
     [_, Host] = string:split(atom_to_list(node()), "@"),
