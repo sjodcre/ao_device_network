@@ -7,5 +7,9 @@ call(<<"log">>, Data) ->
     io:format("[device_logger] Log: ~p~n", [Data]),
     {ok, <<"logged">>};
 
+call(<<"ping">>, Data) ->
+    io:format("[device_logger] Ping: ~p~n", [Data]),
+    {ok, <<"pong">>};
+
 call(_, _) ->
     {error, unknown_key}.

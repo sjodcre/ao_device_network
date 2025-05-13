@@ -13,7 +13,7 @@ init([]) ->
     io:format("~n[ao_node] Ready to receive messages~n"),
     {ok, #{}}.
 
-handle_info(#{from := From, to := ToBin, key := Key, data := Data} = Msg, State) ->
+handle_info(#{from := From, key := Key, data := Data} = Msg, State) ->
     io:format("[ao_node] Routing ~p~n", [Msg]),
     % case parse_device(ToBin) of
     case ?REGISTRY:lookup(Key) of
@@ -55,7 +55,6 @@ send(NodeShort, Text) ->
     [CmdBin | Rest] = binary:split(unicode:characters_to_binary(Text), <<" ">>, [global]),
     Msg = #{
         from => Self,
-        to => device_for(CmdBin),
         key => CmdBin,
         data => unicode:characters_to_binary(string:trim(string:join([binary_to_list(S) || S <- Rest], " ")))
     },
@@ -69,20 +68,20 @@ send(NodeShort, Text) ->
         timeout
     end.
 
-device_for(<<"add">>) -> <<"device_math@1.0">>;
-device_for(<<"mul">>) -> <<"device_math@1.0">>;
-device_for(_)         -> <<"device_logger@1.0">>.
+% device_for(<<"add">>) -> <<"device_math@1.0">>;
+% device_for(<<"mul">>) -> <<"device_math@1.0">>;
+% device_for(_)         -> <<"device_logger@1.0">>.
 
 resolve_full_node(Short) ->
     [_, Host] = string:split(atom_to_list(node()), "@"),
     list_to_atom(atom_to_list(Short) ++ "@" ++ Host).
 
-parse_device(Bin) when is_binary(Bin) ->
-    case binary:split(Bin, <<"@">>, [global]) of
-        [ModBin, _Ver] ->
-            try list_to_existing_atom(binary_to_list(ModBin)) of
-                Mod -> {ok, Mod}
-            catch _:_ -> error
-            end;
-        _ -> error
-    end.
+% parse_device(Bin) when is_binary(Bin) ->
+%     case binary:split(Bin, <<"@">>, [global]) of
+%         [ModBin, _Ver] ->
+%             try list_to_existing_atom(binary_to_list(ModBin)) of
+%                 Mod -> {ok, Mod}
+%             catch _:_ -> error
+%             end;
+%         _ -> error
+%     end.
